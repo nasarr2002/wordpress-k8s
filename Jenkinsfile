@@ -7,15 +7,21 @@ kind: Pod
 spec:
   containers:
   - name: kaniko
-    image: docker.io/kaniko-project/executor:v1.23.2
+    image: registry.gitlab.com/kaniko-project/executor:debug
+    command:
+    - /busybox/sh
     args:
-    - "--dockerfile=/workspace/wordpress-ci/docker/Dockerfile"
-    - "--context=/workspace/wordpress-ci"
-    - "--destination=nas20/wordpress-k8s:v${BUILD_NUMBER}"
-    - "--verbosity=debug"
+    - -c
+    - |
+      /kaniko/executor \
+        --context=/workspace/wordpress-ci \
+        --dockerfile=/workspace/wordpress-ci/docker/Dockerfile \
+        --destination=nas20/wordpress-k8s:v${BUILD_NUMBER} \
+        --verbosity=debug
     volumeMounts:
     - name: docker-config
-      mountPath: /kaniko/.docker/
+      mountPath: /kaniko/.docker
+
   volumes:
   - name: docker-config
     secret:
@@ -30,7 +36,10 @@ spec:
     stages {
         stage("Build with Kaniko") {
             steps {
-                echo "🔥 Building & pushing image to Docker Hub repository nas20/wordpress-k8s..."
+                echo "🔥 Building & pushing Docker image nas20/wordpress-k8s:v${BUILD_NUMBER}"
+                container("kaniko") {
+                    sh "echo 🚀 Kaniko build started..."
+                }
             }
         }
     }
