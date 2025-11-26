@@ -8,26 +8,29 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
+    command:
+    - /kaniko/executor
     args:
-      - "--dockerfile=Dockerfile"
-      - "--context=git://github.com/nasarr2002/wordpress-k8s.git"
-      - "--destination=nasarr/wordpress-custom:v${BUILD_NUMBER}"
-      - "--verbosity=info"
+    - "--dockerfile=Dockerfile"
+    - "--context=/workspace/"
+    - "--destination=nasarr/wordpress-custom:v${BUILD_NUMBER}"
+    - "--verbosity=debug"
     volumeMounts:
-    - name: kaniko-secret
-      mountPath: /kaniko/.docker
+    - name: docker-config
+      mountPath: /kaniko/.docker/
   volumes:
-  - name: kaniko-secret
+  - name: docker-config
     secret:
-      secretName: dockerhub-creds
+      secretName: docker-config
 """
         }
     }
 
     stages {
-        stage('Build & Push Image with Kaniko') {
+
+        stage('Build with Kaniko') {
             steps {
-                echo "Building Docker image with Kaniko..."
+                echo "Building image using Kaniko..."
             }
         }
 
@@ -44,3 +47,4 @@ spec:
         }
     }
 }
+
