@@ -17,7 +17,7 @@ spec:
     - "--verbosity=debug"
     volumeMounts:
     - name: docker-config
-      mountPath: /kaniko/.docker/
+      mountPath: /kaniko/.docker
   volumes:
   - name: docker-config
     secret:
@@ -47,4 +47,3 @@ spec:
         }
     }
 }
-
