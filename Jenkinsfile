@@ -17,32 +17,22 @@ spec:
     - "--verbosity=debug"
     volumeMounts:
     - name: docker-config
-      mountPath: /kaniko/.docker
+      mountPath: /kaniko/.docker/
   volumes:
   - name: docker-config
     secret:
       secretName: docker-config
+      items:
+      - key: .dockerconfigjson
+        path: config.json
 """
         }
     }
 
     stages {
-
         stage('Build with Kaniko') {
             steps {
-                echo "Building WordPress image with Kaniko..."
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    sh """
-                        helm upgrade --install wordpress-stack ./helm/wordpress-stack \
-                            --namespace default \
-                            --set wordpress.tag=v${BUILD_NUMBER}
-                    """
-                }
+                echo "🔧 Building with Kaniko..."
             }
         }
     }
