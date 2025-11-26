@@ -11,8 +11,8 @@ spec:
     command:
     - /kaniko/executor
     args:
-    - "--dockerfile=Dockerfile"
-    - "--context=/workspace/"
+    - "--dockerfile=/workspace/docker/Dockerfile"
+    - "--context=/workspace/docker"
     - "--destination=nasarr/wordpress-custom:v${BUILD_NUMBER}"
     - "--verbosity=debug"
     volumeMounts:
@@ -30,7 +30,7 @@ spec:
 
         stage('Build with Kaniko') {
             steps {
-                echo "Building image using Kaniko..."
+                echo "Building WordPress image with Kaniko..."
             }
         }
 
