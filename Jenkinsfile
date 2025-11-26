@@ -9,13 +9,6 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/nasarr/wordpress-k8s.git'
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 script {
@@ -58,4 +51,5 @@ pipeline {
         }
     }
 }
+
 
