@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 # Copier un thème custom (tu peux modifier après)
-COPY theme/ /var/www/html/wp-content/themes/custom-theme/
+COPY docker/theme/ /var/www/html/wp-content/themes/custom-theme/
 
 # Permissions
 RUN chown -R www-data:www-data /var/www/html
