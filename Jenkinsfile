@@ -63,7 +63,7 @@ spec:
                 container('docker') {
                     sh "sleep 5"
                     sh """
-                        docker build -t $IMAGE_NAME:$IMAGE_TAG -f docker/Dockerfile .
+                        docker build -t $IMAGE_NAME:$IMAGE_TAG -f docker/Dockerfile docker/
                     """
                 }
             }
