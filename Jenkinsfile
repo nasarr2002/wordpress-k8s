@@ -26,7 +26,6 @@ spec:
         - cat
         """
             defaultContainer 'docker'
-            yamlMergeStrategy merge
         }
     }
 
