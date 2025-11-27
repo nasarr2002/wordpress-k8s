@@ -1,5 +1,5 @@
 pipeline {
-    
+
    agent {
     kubernetes {
         yaml """
@@ -26,7 +26,7 @@ spec:
           mountPath: /var/lib/docker
 
     - name: kubectl
-      image: bitnami/kubectl:latest
+      image: lachlanevenson/k8s-helm:latest
       command:
         - cat
       tty: true
@@ -50,7 +50,7 @@ spec:
 
         stage('Clone repository') {
             steps {
-                container('kubectl') {
+                container('docker') {
                     git branch: 'main',
                         credentialsId: 'github-creds',
                         url: 'https://github.com/nasarr2002/wordpress-k8s.git'
@@ -81,8 +81,8 @@ spec:
         stage('Deploy to Kubernetes') {
             steps {
                 container('kubectl') {
-                    writeFile file: 'kubeconfig', text: KUBECONFIG_CRED
-                    sh 'export KUBECONFIG=kubeconfig'
+                    writeFile file: '/home/jenkins/.kube/config', text: KUBECONFIG_CRED
+                    sh "chmod 600 /home/jenkins/.kube/config"
                     sh "helm upgrade --install blog ./blog -n default --set image.repository=$IMAGE_NAME --set image.tag=$IMAGE_TAG"
                 }
             }
