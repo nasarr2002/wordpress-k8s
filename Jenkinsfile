@@ -1,41 +1,27 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: docker
-    image: docker:24.0.6
-    tty: true
-    securityContext:
-      privileged: true
-    volumeMounts:
-    - name: docker-sock
-      mountPath: /var/run/docker.sock
-  volumes:
-  - name: docker-sock
-    hostPath:
-      path: /var/run/docker.sock
-"""
-        }
+    agent any
+
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
+        KUBECONFIG_CRED = credentials('kubeconfig')
+        IMAGE_NAME = "nas20/wordpress-k8s"
+        IMAGE_TAG = "v1"
     }
 
     stages {
-
-        stage('Checkout Code') {
+        stage('Clone repository') {
             steps {
-                git url: 'https://github.com/nasarr2002/wordpress-k8s.git', branch: 'main'
+                git branch: 'main',
+                    credentialsId: 'github-creds',
+                    url: 'https://github.com/nasarr/wordpress-k8s.git'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Docker image') {
             steps {
-                container('docker') {
+                script {
                     sh """
-                        echo "🚀 Building image nas2/wordpress-k8s:v${BUILD_NUMBER}"
-                        docker build -t nas2/wordpress-k8s:v${BUILD_NUMBER} .
+                    docker build -t $IMAGE_NAME:$IMAGE_TAG -f docker/Dockerfile .
                     """
                 }
             }
@@ -43,25 +29,32 @@ spec:
 
         stage('Login to Docker Hub') {
             steps {
-                container('docker') {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
-                                                     usernameVariable: 'USER',
-                                                     passwordVariable: 'PASS')]) {
-                        sh """
-                            echo "🔐 Logging in Docker Hub..."
-                            echo "$PASS" | docker login -u "$USER" --password-stdin
-                        """
-                    }
-                }
+                sh """
+                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                """
             }
         }
 
-        stage('Push Image') {
+        stage('Push image') {
             steps {
-                container('docker') {
+                sh """
+                docker push $IMAGE_NAME:$IMAGE_TAG
+                """
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Create temporary kubeconfig
+                    writeFile file: 'kubeconfig', text: KUBECONFIG_CRED
+                    sh 'export KUBECONFIG=kubeconfig'
+
+                    // Helm upgrade WordPress
                     sh """
-                        echo "📤 Pushing image..."
-                        docker push nas2/wordpress-k8s:v${BUILD_NUMBER}
+                    helm upgrade --install blog ./blog -n default \
+                        --set image.repository=$IMAGE_NAME \
+                        --set image.tag=$IMAGE_TAG
                     """
                 }
             }
