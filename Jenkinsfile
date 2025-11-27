@@ -16,15 +16,24 @@ spec:
         privileged: true
       tty: true
       command:
-        - cat
+        - dockerd-entrypoint.sh
+      args:
+        - --host=tcp://0.0.0.0:2375
+        - --host=unix:///var/run/docker.sock
       volumeMounts:
         - name: dind-storage
           mountPath: /var/lib/docker
+
     - name: kubectl
       image: bitnami/kubectl:1.29
       command:
         - cat
-        """
+      tty: true
+
+  volumes:
+    - name: dind-storage
+      emptyDir: {}
+"""
             defaultContainer 'docker'
         }
     }
@@ -37,9 +46,10 @@ spec:
     }
 
     stages {
+
         stage('Clone repository') {
             steps {
-                container('docker') {
+                container('kubectl') {
                     git branch: 'main',
                         credentialsId: 'github-creds',
                         url: 'https://github.com/nasarr2002/wordpress-k8s.git'
@@ -50,24 +60,18 @@ spec:
         stage('Build Docker image') {
             steps {
                 container('docker') {
-                    sh "dockerd-entrypoint.sh &"
                     sh "sleep 5"
-                    sh "docker build -t $IMAGE_NAME:$IMAGE_TAG -f docker/Dockerfile ."
+                    sh """
+                        docker build -t $IMAGE_NAME:$IMAGE_TAG -f docker/Dockerfile .
+                    """
                 }
             }
         }
 
-        stage('Login to Docker Hub') {
+        stage('Login & Push to Docker Hub') {
             steps {
                 container('docker') {
                     sh "echo \$DOCKERHUB_CREDENTIALS_PSW | docker login -u \$DOCKERHUB_CREDENTIALS_USR --password-stdin"
-                }
-            }
-        }
-
-        stage('Push image') {
-            steps {
-                container('docker') {
                     sh "docker push $IMAGE_NAME:$IMAGE_TAG"
                 }
             }
