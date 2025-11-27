@@ -1,7 +1,8 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml """
+    
+   agent {
+    kubernetes {
+        yaml """
 apiVersion: v1
 kind: Pod
 metadata:
@@ -25,7 +26,7 @@ spec:
           mountPath: /var/lib/docker
 
     - name: kubectl
-      image: bitnami/kubectl:1.29
+      image: bitnami/kubectl:latest
       command:
         - cat
       tty: true
@@ -34,9 +35,9 @@ spec:
     - name: dind-storage
       emptyDir: {}
 """
-            defaultContainer 'docker'
-        }
+        defaultContainer 'docker'
     }
+}
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
