@@ -1,5 +1,34 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-agent
+spec:
+  serviceAccountName: default
+  containers:
+    - name: docker
+      image: docker:24.0.6-dind
+      securityContext:
+        privileged: true
+      tty: true
+      command:
+        - cat
+      volumeMounts:
+        - name: dind-storage
+          mountPath: /var/lib/docker
+    - name: kubectl
+      image: bitnami/kubectl:1.29
+      command:
+        - cat
+        """
+            defaultContainer 'docker'
+            yamlMergeStrategy merge
+        }
+    }
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
@@ -11,51 +40,46 @@ pipeline {
     stages {
         stage('Clone repository') {
             steps {
-                git branch: 'main',
-                    credentialsId: 'github-creds',
-                    url: 'https://github.com/nasarr2002/wordpress-k8s.git'
+                container('docker') {
+                    git branch: 'main',
+                        credentialsId: 'github-creds',
+                        url: 'https://github.com/nasarr2002/wordpress-k8s.git'
+                }
             }
         }
 
         stage('Build Docker image') {
             steps {
-                script {
-                    sh """
-                    docker build -t $IMAGE_NAME:$IMAGE_TAG -f docker/Dockerfile .
-                    """
+                container('docker') {
+                    sh "dockerd-entrypoint.sh &"
+                    sh "sleep 5"
+                    sh "docker build -t $IMAGE_NAME:$IMAGE_TAG -f docker/Dockerfile ."
                 }
             }
         }
 
         stage('Login to Docker Hub') {
             steps {
-                sh """
-                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
-                """
+                container('docker') {
+                    sh "echo \$DOCKERHUB_CREDENTIALS_PSW | docker login -u \$DOCKERHUB_CREDENTIALS_USR --password-stdin"
+                }
             }
         }
 
         stage('Push image') {
             steps {
-                sh """
-                docker push $IMAGE_NAME:$IMAGE_TAG
-                """
+                container('docker') {
+                    sh "docker push $IMAGE_NAME:$IMAGE_TAG"
+                }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                script {
-                    // Create temporary kubeconfig
+                container('kubectl') {
                     writeFile file: 'kubeconfig', text: KUBECONFIG_CRED
                     sh 'export KUBECONFIG=kubeconfig'
-
-                    // Helm upgrade WordPress
-                    sh """
-                    helm upgrade --install blog ./blog -n default \
-                        --set image.repository=$IMAGE_NAME \
-                        --set image.tag=$IMAGE_TAG
-                    """
+                    sh "helm upgrade --install blog ./blog -n default --set image.repository=$IMAGE_NAME --set image.tag=$IMAGE_TAG"
                 }
             }
         }
