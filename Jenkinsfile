@@ -13,7 +13,7 @@ pipeline {
             steps {
                 git branch: 'main',
                     credentialsId: 'github-creds',
-                    url: 'https://github.com/nasarr/wordpress-k8s.git'
+                    url: 'https://github.com/nasarr2002/wordpress-k8s.git'
             }
         }
 
