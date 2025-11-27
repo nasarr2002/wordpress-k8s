@@ -16,19 +16,15 @@ spec:
       securityContext:
         privileged: true
       tty: true
-      command:
-        - dockerd-entrypoint.sh
-      args:
-        - --host=tcp://0.0.0.0:2375
-        - --host=unix:///var/run/docker.sock
+      command: [ "dockerd-entrypoint.sh" ]
+      args: [ "--host=tcp://0.0.0.0:2375", "--host=unix:///var/run/docker.sock" ]
       volumeMounts:
         - name: dind-storage
           mountPath: /var/lib/docker
 
     - name: kubectl
       image: lachlanevenson/k8s-helm:latest
-      command:
-        - cat
+      command: [ "cat" ]
       tty: true
 
   volumes:
@@ -41,7 +37,6 @@ spec:
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
-        KUBECONFIG_CRED = credentials('kubeconfig')
         IMAGE_NAME = "nas20/wordpress-k8s"
         IMAGE_TAG = "v1"
     }
@@ -81,9 +76,21 @@ spec:
         stage('Deploy to Kubernetes') {
             steps {
                 container('kubectl') {
-                    writeFile file: '/home/jenkins/.kube/config', text: KUBECONFIG_CRED
-                    sh "chmod 600 /home/jenkins/.kube/config"
-                    sh "helm upgrade --install blog ./blog -n default --set image.repository=$IMAGE_NAME --set image.tag=$IMAGE_TAG"
+
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                        sh """
+                          mkdir -p /home/jenkins/.kube
+                          cp $KUBECONFIG_FILE /home/jenkins/.kube/config
+                          chmod 600 /home/jenkins/.kube/config
+                        """
+                    }
+
+                    sh """
+                      export KUBECONFIG=/home/jenkins/.kube/config
+                      helm upgrade --install blog ./blog -n default \
+                        --set image.repository=$IMAGE_NAME \
+                        --set image.tag=$IMAGE_TAG
+                    """
                 }
             }
         }
