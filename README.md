@@ -56,4 +56,4 @@ L’architecture repose sur :
 - Observabilité Cloud-Native
 - Sécurité Kubernetes
 - Architecture scalable et résiliente
-- 
+  
